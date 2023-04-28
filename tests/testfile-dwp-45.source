@@ -1,0 +1,85 @@
+# Nonsensical program used to generate an example DWARF4 and DWARF5 file.
+# The generated code is the same, but the DWARF representation is different.
+
+# = hello.h =
+
+extern int m;
+extern int baz (int x);
+
+static inline int
+frob (int a, int b)
+{
+  int c = a;
+
+  if (a > b)
+    c -= b;
+
+  return baz (c);
+}
+
+# = hello.c =
+
+#include <stddef.h>
+#include "hello.h"
+
+extern int main (int, char **);
+int m = 2;
+
+wchar_t foo (wchar_t);
+int baz (int x)
+{
+  int r = x;
+
+  if (x > m)
+    r -= m;
+
+  r = foo (r);
+  return r;
+}
+
+wchar_t
+foo (wchar_t f)
+{
+  if (f < 0)
+    return main (f, NULL);
+
+  return f > 0 ? frob (f - 1, m) : 0;
+}
+
+# = world.c =
+
+#include "hello.h"
+#include <stdlib.h>
+
+int
+calc (const char *word)
+{
+  if (word == 0 || word[0] == '\0')
+    return 0;
+
+  return frob (word[0], m + 42);
+}
+
+int
+main (int argc, const char **argv)
+{
+  const char *n;
+  if (argc > 1)
+    n = argv[0];
+  else
+    n = "world";
+
+  exit (calc (n));
+}
+
+$ /opt/llvm/bin/clang -gdwarf-4 -gsplit-dwarf -O2 -o testfile-dwp-world4.o -c world.c
+$ /opt/llvm/bin/clang -gdwarf-4 -gsplit-dwarf -O2 -o testfile-dwp-hello4.o -c hello.c
+$ /opt/llvm/bin/clang -o testfile-dwp-4 testfile-dwp-hello4.o testfile-dwp-world4.o
+$ /opt/llvm/bin/llvm-dwp -o=testfile-dwp-4.dwp -e=testfile-dwp-4
+$ rm testfile-dwp-hello4.dwo testfile-dwp-world4.dwo
+
+$ gcc -gdwarf-5 -gsplit-dwarf -gno-as-loc-support -gno-variable-location-views -O2 -o testfile-dwp-world5.o -c world.c
+$ gcc -gdwarf-5 -gsplit-dwarf -gno-as-loc-support -gno-variable-location-views -O2 -o testfile-dwp-hello5.o -c hello.c
+$ gcc -o testfile-dwp-5 testfile-dwp-hello5.o testfile-dwp-world5.o
+$ llvm-dwp -o=testfile-dwp-5.dwp -e=testfile-dwp-5
+$ rm testfile-dwp-hello5.dwo testfile-dwp-world5.dwo

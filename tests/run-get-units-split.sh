@@ -59,6 +59,28 @@ Found a skeleton unit, with split die: world.c
 
 EOF
 
+# see tests/testfile-dwp-45.source
+testfiles testfile-dwp-4 testfile-dwp-4.dwp
+testfiles testfile-dwp-5 testfile-dwp-5.dwp
+
+testrun_compare ${abs_builddir}/get-units-split testfile-dwp-4 << \EOF
+file: testfile-dwp-4
+Got cudie unit_type: 4
+Found a skeleton unit, with split die: hello.c
+Got cudie unit_type: 4
+Found a skeleton unit, with split die: world.c
+
+EOF
+
+testrun_compare ${abs_builddir}/get-units-split testfile-dwp-5 << \EOF
+file: testfile-dwp-5
+Got cudie unit_type: 4
+Found a skeleton unit, with split die: hello.c
+Got cudie unit_type: 4
+Found a skeleton unit, with split die: world.c
+
+EOF
+
 # Self test (Not on obj files since those need relocation first).
 testrun_on_self_exe ${abs_builddir}/get-units-split
 testrun_on_self_lib ${abs_builddir}/get-units-split
