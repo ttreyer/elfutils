@@ -83,6 +83,8 @@ enum
     IDX_debug_ranges,
     IDX_debug_rnglists,
     IDX_gnu_debugaltlink,
+    IDX_debug_cu_index,
+    IDX_debug_tu_index,
     IDX_last
   };
 
@@ -145,6 +147,8 @@ enum
   DWARF_E_NOT_CUDIE,
   DWARF_E_UNKNOWN_LANGUAGE,
   DWARF_E_NO_DEBUG_ADDR,
+  DWARF_E_NO_DEBUG_CU_INDEX,
+  DWARF_E_NO_DEBUG_TU_INDEX,
 };
 
 
@@ -1344,6 +1348,8 @@ __libdw_link_skel_split (Dwarf_CU *skel, Dwarf_CU *split)
    Returns -1 and sets libdw_errno if an error occurs.  */
 int __libdw_addrx (Dwarf_CU *cu, Dwarf_Word idx, Dwarf_Addr *addr);
 
+/* Helper function to find this Dwarf ELF file to locate alt and dwo files. */
+char * __libdw_elfpath (int fd);
 
 /* Helper function to set debugdir field in Dwarf, used from dwarf_begin_elf
    and libdwfl process_file.  */

@@ -67,7 +67,9 @@ static const char dwarf_scnnames[IDX_last][19] =
   [IDX_debug_macro] = ".debug_macro",
   [IDX_debug_ranges] = ".debug_ranges",
   [IDX_debug_rnglists] = ".debug_rnglists",
-  [IDX_gnu_debugaltlink] = ".gnu_debugaltlink"
+  [IDX_gnu_debugaltlink] = ".gnu_debugaltlink",
+  [IDX_debug_cu_index] = ".debug_cu_index",
+  [IDX_debug_tu_index] = ".debug_tu_index",
 };
 #define ndwarf_scnnames (sizeof (dwarf_scnnames) / sizeof (dwarf_scnnames[0]))
 
@@ -92,7 +94,9 @@ static const enum string_section_index scn_to_string_section_idx[IDX_last] =
   [IDX_debug_macro] = STR_SCN_IDX_last,
   [IDX_debug_ranges] = STR_SCN_IDX_last,
   [IDX_debug_rnglists] = STR_SCN_IDX_last,
-  [IDX_gnu_debugaltlink] = STR_SCN_IDX_last
+  [IDX_gnu_debugaltlink] = STR_SCN_IDX_last,
+  [IDX_debug_cu_index] = STR_SCN_IDX_last,
+  [IDX_debug_tu_index] = STR_SCN_IDX_last,
 };
 
 static enum dwarf_type
@@ -112,7 +116,9 @@ scn_dwarf_type (Dwarf *result, size_t shstrndx, Elf_Scn *scn)
       else if (startswith (scnname, ".debug_") || startswith (scnname, ".zdebug_"))
 	{
 	  size_t len = strlen (scnname);
-	  if (strcmp (scnname + len - 4, ".dwo") == 0)
+	  if (strcmp (scnname + len - 4, ".dwo") == 0
+        || strcmp(scnname, ".debug_cu_index") == 0
+        || strcmp(scnname, ".debug_tu_index") == 0)
 	    return TYPE_DWO;
 	  else
 	    return TYPE_PLAIN;
@@ -185,7 +191,7 @@ check_section (Dwarf *result, size_t shstrndx, Elf_Scn *scn, bool inscngrp)
 	      if (result->type == TYPE_PLAIN)
 		break;
 	    }
-	  else if (result->type == TYPE_DWO)
+	  if (result->type == TYPE_DWO)
 	    break;
 	}
       else if (scnname[0] == '.' && scnname[1] == 'z'
@@ -271,16 +277,24 @@ check_section (Dwarf *result, size_t shstrndx, Elf_Scn *scn, bool inscngrp)
   return result;
 }
 
+/* Helper function to find a Dwarf's ELF file to locate dwp files. */
+char *
+__libdw_elfpath (int fd)
+{
+  /* strlen ("/proc/self/fd/") = 14 + strlen (<MAXINT>) = 10 + 1 = 25.  */
+  char devfdpath[25] = { 0 };
+  snprintf (devfdpath, sizeof(devfdpath), "/proc/self/fd/%u", fd);
+  char *fdpath = realpath (devfdpath, NULL);
+  return fdpath;
+}
+
 
 /* Helper function to set debugdir field.  We want to cache the dir
    where we found this Dwarf ELF file to locate alt and dwo files.  */
 char *
 __libdw_debugdir (int fd)
 {
-  /* strlen ("/proc/self/fd/") = 14 + strlen (<MAXINT>) = 10 + 1 = 25.  */
-  char devfdpath[25];
-  sprintf (devfdpath, "/proc/self/fd/%u", fd);
-  char *fdpath = realpath (devfdpath, NULL);
+  char *fdpath = __libdw_elfpath (fd);
   char *fddir;
   if (fdpath != NULL && fdpath[0] == '/'
       && (fddir = strrchr (fdpath, '/')) != NULL)
